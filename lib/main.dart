@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:movie_hub/screens/home_screen.dart';
 
 void main() {
   runApp(MovieHubApp());
