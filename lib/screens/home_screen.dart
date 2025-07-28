@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/movie.dart';
+import 'movie_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final List<Movie> movies = [
@@ -20,17 +21,23 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Movie Hub'),
-      ),
+      appBar: AppBar(title: Text('Movie Hub')),
       body: ListView.builder(
         itemCount: movies.length,
         itemBuilder: (context, index) {
-          final movie = movies[index]; 
+          final movie = movies[index];
           return Card(
             child: ListTile(
               leading: Image.network(movie.posterUrl, width: 50),
               title: Text(movie.title),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MovieDetailScreen(movie: movie),
+                  ),
+                );
+              },
             ),
           );
         },
