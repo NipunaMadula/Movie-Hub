@@ -5,16 +5,16 @@ import 'movie_detail_screen.dart';
 class HomeScreen extends StatelessWidget {
   final List<Movie> movies = [
     Movie(
-      title: 'Inception',
-      posterUrl: 'https://image.tmdb.org/t/p/w500//qmDpIHrmpJINaRKAfWQfftjCdyi.jpg',
+      title: 'Avengers: Endgame',
+      posterUrl: 'https://upload.wikimedia.org/wikipedia/en/0/0d/Avengers_Endgame_poster.jpg',
     ),
     Movie(
       title: 'Interstellar',
-      posterUrl: 'https://image.tmdb.org/t/p/w500//gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+      posterUrl: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
     ),
     Movie(
       title: 'Joker',
-      posterUrl: 'https://image.tmdb.org/t/p/w500//udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
+      posterUrl: 'https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
     ),
   ];
 
