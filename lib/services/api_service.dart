@@ -1,12 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/movie.dart';
 
 class ApiService {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
-  static const String _apiKey = '323d76bfc114a12d4105487c4e0af07d';
+
+  static final String? _apiKey = dotenv.env['TMDB_API_KEY'];
 
   static Future<List<Movie>> fetchPopularMovies() async {
+    if (_apiKey == null) {
+      throw Exception('API key is missing. Please check your .env file.');
+    }
+
     final response = await http.get(
       Uri.parse('$_baseUrl/movie/popular?api_key=$_apiKey'),
     );
