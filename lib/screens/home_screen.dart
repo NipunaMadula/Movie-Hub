@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _hasMoreData = true;
   int _currentPage = 1;
   String? _error;
+  bool _isNetworkError = false;
   
   // Search and navigation
   final TextEditingController _searchController = TextEditingController();
@@ -65,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() {
       _isLoading = true;
       _error = null;
+      _isNetworkError = false;
       _movies.clear();
       _currentPage = 1;
       _hasMoreData = true;
@@ -80,7 +82,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = _getErrorMessage(e);
+        _isNetworkError = _isNetworkException(e);
         _isLoading = false;
       });
     }
@@ -105,6 +108,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         _isLoadingMore = false;
       });
+      
+      // Show a snackbar for load more errors instead of replacing the whole UI
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _isNetworkException(e) 
+                        ? 'Connection error. Pull down to refresh.' 
+                        : 'Failed to load more movies.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red[600],
+            duration: Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _loadMoreMovies,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -160,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _currentSearchQuery = query;
       _isLoading = true;
       _error = null;
+      _isNetworkError = false;
       _movies.clear();
       _currentPage = 1;
       _hasMoreData = true;
@@ -175,7 +208,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = _getErrorMessage(e);
+        _isNetworkError = _isNetworkException(e);
         _isLoading = false;
       });
     }
@@ -193,6 +227,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _refreshMovies() async {
     await _loadInitialMovies();
+  }
+
+  String _getErrorMessage(dynamic error) {
+    String errorString = error.toString().toLowerCase();
+    
+    if (errorString.contains('socketexception') || 
+        errorString.contains('network') ||
+        errorString.contains('connection') ||
+        errorString.contains('unreachable')) {
+      return 'No internet connection. Please check your network and try again.';
+    } else if (errorString.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    } else if (errorString.contains('404')) {
+      return 'Content not found. Please try again later.';
+    } else if (errorString.contains('500') || errorString.contains('server')) {
+      return 'Server error. Please try again later.';
+    } else if (errorString.contains('api key')) {
+      return 'Service temporarily unavailable. Please try again later.';
+    } else if (errorString.contains('failed to load')) {
+      return 'Failed to load movies. Please check your connection.';
+    } else {
+      return 'Something went wrong. Please try again.';
+    }
+  }
+
+  bool _isNetworkException(dynamic error) {
+    String errorString = error.toString().toLowerCase();
+    return errorString.contains('socketexception') || 
+           errorString.contains('network') ||
+           errorString.contains('connection') ||
+           errorString.contains('unreachable') ||
+           errorString.contains('timeout');
   }
 
   Future<void> _toggleFavorite(Movie movie) async {
@@ -219,7 +285,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Movie Hub'),
+        title: Row(
+          children: [
+            Text('Movie Hub'),
+            if (_isNetworkError && _movies.isEmpty) ...[
+              SizedBox(width: 8),
+              Icon(
+                Icons.wifi_off,
+                size: 16,
+                color: Colors.orange[300],
+              ),
+            ],
+          ],
+        ),
         toolbarHeight: 56, 
         actions: [
           Container(
@@ -326,84 +404,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (_isLoading && _movies.isEmpty) {
       return _buildShimmerLoading();
     } else if (_error != null && _movies.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[400],
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Error loading movies',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadInitialMovies,
-              child: Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return _buildErrorWidget();
     } else if (_movies.isEmpty) {
-      return SingleChildScrollView(
-        physics: AlwaysScrollableScrollPhysics(),
-        child: Container(
-          height: MediaQuery.of(context).size.height - 200,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.movie_outlined,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                SizedBox(height: 16),
-                Text(
-                  _currentSearchQuery.isEmpty 
-                      ? 'No ${_getCategoryDisplayName()} movies found.' 
-                      : 'No movies found for "$_currentSearchQuery"',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                if (_currentSearchQuery.isNotEmpty) ...[
-                  SizedBox(height: 8),
-                  Text(
-                    'Try searching with different keywords.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-                SizedBox(height: 16),
-                Text(
-                  'Pull down to refresh',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return _buildEmptyStateWidget();
     }
 
     return GridView.builder(
@@ -435,6 +438,182 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: buildMovieCard(movie),
         );
       },
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return SingleChildScrollView(
+      physics: AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height - 200,
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _isNetworkError ? Icons.wifi_off : Icons.error_outline,
+                size: 80,
+                color: _isNetworkError ? Colors.orange[400] : Colors.red[400],
+              ),
+              SizedBox(height: 24),
+              Text(
+                _isNetworkError ? 'No Internet Connection' : 'Oops! Something went wrong',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 32),
+              Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _loadInitialMovies,
+                    icon: Icon(Icons.refresh),
+                    label: Text('Try Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                  if (_isNetworkError) ...[
+                    SizedBox(height: 16),
+                    Text(
+                      'Check your internet connection and try again',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateWidget() {
+    return SingleChildScrollView(
+      physics: AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height - 200,
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _currentSearchQuery.isNotEmpty ? Icons.search_off : Icons.movie_outlined,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              SizedBox(height: 24),
+              Text(
+                _currentSearchQuery.isNotEmpty 
+                    ? 'No Results Found' 
+                    : 'No ${_getCategoryDisplayName().toUpperCase()} Movies',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                _currentSearchQuery.isNotEmpty
+                    ? 'We couldn\'t find any movies matching\n"${_currentSearchQuery}"'
+                    : 'No ${_getCategoryDisplayName()} movies are available right now.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 32),
+              if (_currentSearchQuery.isNotEmpty) ...[
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                      icon: Icon(Icons.clear),
+                      label: Text('Clear Search'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Try different keywords or browse categories',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _loadInitialMovies,
+                      icon: Icon(Icons.refresh),
+                      label: Text('Refresh'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Pull down to refresh or try a different category',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
