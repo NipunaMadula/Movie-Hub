@@ -4,26 +4,58 @@ import '../models/movie.dart';
 import '../services/api_service.dart';
 import 'movie_detail_screen.dart';
 
+enum MovieCategory { popular, topRated, upcoming }
+
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late Future<List<Movie>> _movies;
   final TextEditingController _searchController = TextEditingController();
   String _currentSearchQuery = '';
+  late TabController _tabController;
+  MovieCategory _currentCategory = MovieCategory.popular;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _movies = ApiService.fetchPopularMovies();
+    
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _onCategoryChanged(_tabController.index);
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  void _onCategoryChanged(int index) {
+    setState(() {
+      _currentCategory = MovieCategory.values[index];
+      _currentSearchQuery = ''; // Clear search when changing category
+      _searchController.clear(); // Clear search field
+      
+      switch (_currentCategory) {
+        case MovieCategory.popular:
+          _movies = ApiService.fetchPopularMovies();
+          break;
+        case MovieCategory.topRated:
+          _movies = ApiService.fetchTopRatedMovies();
+          break;
+        case MovieCategory.upcoming:
+          _movies = ApiService.fetchUpcomingMovies();
+          break;
+      }
+    });
   }
 
   void _searchMovies(String query) {
@@ -40,7 +72,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refreshMovies() async {
     setState(() {
       if (_currentSearchQuery.isEmpty) {
-        _movies = ApiService.fetchPopularMovies();
+        // Refresh based on current category
+        switch (_currentCategory) {
+          case MovieCategory.popular:
+            _movies = ApiService.fetchPopularMovies();
+            break;
+          case MovieCategory.topRated:
+            _movies = ApiService.fetchTopRatedMovies();
+            break;
+          case MovieCategory.upcoming:
+            _movies = ApiService.fetchUpcomingMovies();
+            break;
+        }
       } else {
         _movies = ApiService.searchMovies(_currentSearchQuery);
       }
@@ -53,36 +96,64 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text('Movie Hub'),
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(60),
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search movies...',
-                prefixIcon: Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchMovies('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
+          preferredSize: Size.fromHeight(120),
+          child: Column(
+            children: [
+              // Search Bar
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search movies...',
+                    prefixIcon: Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchMovies('');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onChanged: (value) {
+                    setState(() {}); // To update the clear button visibility
+                  },
+                  onSubmitted: _searchMovies,
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              onChanged: (value) {
-                setState(() {}); // To update the clear button visibility
-              },
-              onSubmitted: _searchMovies,
-            ),
+              // TabBar
+              if (_currentSearchQuery.isEmpty) // Only show tabs when not searching
+                TabBar(
+                  controller: _tabController,
+                  indicatorColor: Colors.deepPurple,
+                  labelColor: Colors.deepPurple,
+                  unselectedLabelColor: Colors.grey[600],
+                  labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                  tabs: [
+                    Tab(
+                      icon: Icon(Icons.trending_up),
+                      text: 'Popular',
+                    ),
+                    Tab(
+                      icon: Icon(Icons.star),
+                      text: 'Top Rated',
+                    ),
+                    Tab(
+                      icon: Icon(Icons.upcoming),
+                      text: 'Upcoming',
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       ),
@@ -112,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(height: 16),
                         Text(
                           _currentSearchQuery.isEmpty 
-                              ? 'No movies found.' 
+                              ? 'No ${_getCategoryDisplayName()} movies found.' 
                               : 'No movies found for "$_currentSearchQuery"',
                           style: TextStyle(
                             fontSize: 16,
@@ -227,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  "Popular Movie",
+                  _getCategoryLabel(),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -308,5 +379,31 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  String _getCategoryDisplayName() {
+    switch (_currentCategory) {
+      case MovieCategory.popular:
+        return 'popular';
+      case MovieCategory.topRated:
+        return 'top rated';
+      case MovieCategory.upcoming:
+        return 'upcoming';
+    }
+  }
+
+  String _getCategoryLabel() {
+    if (_currentSearchQuery.isNotEmpty) {
+      return 'Search Result';
+    }
+    
+    switch (_currentCategory) {
+      case MovieCategory.popular:
+        return 'Popular Movie';
+      case MovieCategory.topRated:
+        return 'Top Rated Movie';
+      case MovieCategory.upcoming:
+        return 'Upcoming Movie';
+    }
   }
 }

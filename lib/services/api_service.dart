@@ -16,13 +16,25 @@ class ApiService {
   }
 
   static Future<List<Movie>> fetchPopularMovies() async {
+    return _fetchMoviesByCategory('popular');
+  }
+
+  static Future<List<Movie>> fetchTopRatedMovies() async {
+    return _fetchMoviesByCategory('top_rated');
+  }
+
+  static Future<List<Movie>> fetchUpcomingMovies() async {
+    return _fetchMoviesByCategory('upcoming');
+  }
+
+  static Future<List<Movie>> _fetchMoviesByCategory(String category) async {
     final apiKey = _apiKey;
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('API key is missing. Please check your .env file.');
     }
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/movie/popular?api_key=$apiKey'),
+      Uri.parse('$_baseUrl/movie/$category?api_key=$apiKey'),
     );
 
     if (response.statusCode == 200) {
@@ -31,7 +43,7 @@ class ApiService {
 
       return movies.map((json) => Movie.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load movies');
+      throw Exception('Failed to load $category movies');
     }
   }
 
