@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/movie.dart';
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _currentSearchQuery = '';
   late TabController _tabController;
   MovieCategory _currentCategory = MovieCategory.popular;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void dispose() {
     _searchController.dispose();
     _tabController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -62,10 +65,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() {
       _currentSearchQuery = query;
       if (query.isEmpty) {
-        _movies = ApiService.fetchPopularMovies();
+        // Return to current category when search is cleared
+        switch (_currentCategory) {
+          case MovieCategory.popular:
+            _movies = ApiService.fetchPopularMovies();
+            break;
+          case MovieCategory.topRated:
+            _movies = ApiService.fetchTopRatedMovies();
+            break;
+          case MovieCategory.upcoming:
+            _movies = ApiService.fetchUpcomingMovies();
+            break;
+        }
       } else {
         _movies = ApiService.searchMovies(query);
       }
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    // Cancel the previous timer
+    _debounceTimer?.cancel();
+    
+    // Start a new timer
+    _debounceTimer = Timer(Duration(milliseconds: 500), () {
+      _searchMovies(query);
     });
   }
 
@@ -112,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             icon: Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
-                              _searchMovies('');
+                              _onSearchChanged(''); // Use real-time search
                             },
                           )
                         : null,
@@ -126,8 +150,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   onChanged: (value) {
                     setState(() {}); // To update the clear button visibility
+                    _onSearchChanged(value); // Real-time search
                   },
-                  onSubmitted: _searchMovies,
+                  onSubmitted: _searchMovies, // Keep immediate search on submit
                 ),
               ),
               // TabBar
