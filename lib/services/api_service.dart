@@ -15,26 +15,26 @@ class ApiService {
     }
   }
 
-  static Future<List<Movie>> fetchPopularMovies() async {
-    return _fetchMoviesByCategory('popular');
+  static Future<List<Movie>> fetchPopularMovies({int page = 1}) async {
+    return _fetchMoviesByCategory('popular', page: page);
   }
 
-  static Future<List<Movie>> fetchTopRatedMovies() async {
-    return _fetchMoviesByCategory('top_rated');
+  static Future<List<Movie>> fetchTopRatedMovies({int page = 1}) async {
+    return _fetchMoviesByCategory('top_rated', page: page);
   }
 
-  static Future<List<Movie>> fetchUpcomingMovies() async {
-    return _fetchMoviesByCategory('upcoming');
+  static Future<List<Movie>> fetchUpcomingMovies({int page = 1}) async {
+    return _fetchMoviesByCategory('upcoming', page: page);
   }
 
-  static Future<List<Movie>> _fetchMoviesByCategory(String category) async {
+  static Future<List<Movie>> _fetchMoviesByCategory(String category, {int page = 1}) async {
     final apiKey = _apiKey;
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('API key is missing. Please check your .env file.');
     }
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/movie/$category?api_key=$apiKey'),
+      Uri.parse('$_baseUrl/movie/$category?api_key=$apiKey&page=$page'),
     );
 
     if (response.statusCode == 200) {
@@ -47,18 +47,18 @@ class ApiService {
     }
   }
 
-  static Future<List<Movie>> searchMovies(String query) async {
+  static Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     final apiKey = _apiKey;
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('API key is missing. Please check your .env file.');
     }
 
     if (query.isEmpty) {
-      return fetchPopularMovies(); // Return popular movies if search is empty
+      return fetchPopularMovies(page: page); // Return popular movies if search is empty
     }
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/search/movie?api_key=$apiKey&query=${Uri.encodeComponent(query)}'),
+      Uri.parse('$_baseUrl/search/movie?api_key=$apiKey&query=${Uri.encodeComponent(query)}&page=$page'),
     );
 
     if (response.statusCode == 200) {

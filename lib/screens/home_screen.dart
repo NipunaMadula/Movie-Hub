@@ -15,13 +15,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late Future<List<Movie>> _movies;
+  // Movie data management
+  List<Movie> _movies = [];
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  int _currentPage = 1;
+  String? _error;
+  
+  // Search and navigation
   final TextEditingController _searchController = TextEditingController();
   String _currentSearchQuery = '';
   late TabController _tabController;
   MovieCategory _currentCategory = MovieCategory.popular;
   Timer? _debounceTimer;
   
+  // Scroll controller for infinite scroll
+  final ScrollController _scrollController = ScrollController();
+  
+  // Favorites
   late FavoritesService _favoritesService;
   Set<int> _favoriteMovieIds = {};
 
@@ -29,14 +41,86 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _movies = ApiService.fetchPopularMovies();
     _initializeFavorites();
+    _loadInitialMovies();
+    _setupScrollListener();
     
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         _onCategoryChanged(_tabController.index);
       }
     });
+  }
+
+  void _setupScrollListener() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= 
+          _scrollController.position.maxScrollExtent - 200) {
+        _loadMoreMovies();
+      }
+    });
+  }
+
+  Future<void> _loadInitialMovies() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _movies.clear();
+      _currentPage = 1;
+      _hasMoreData = true;
+    });
+
+    try {
+      final movies = await _getMoviesForCurrentCategory(page: 1);
+      setState(() {
+        _movies = movies;
+        _isLoading = false;
+        _currentPage = 2;
+        _hasMoreData = movies.length >= 20; // TMDB typically returns 20 items per page
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreMovies() async {
+    if (_isLoadingMore || !_hasMoreData || _currentSearchQuery.isNotEmpty) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final newMovies = await _getMoviesForCurrentCategory(page: _currentPage);
+      setState(() {
+        _movies.addAll(newMovies);
+        _currentPage++;
+        _hasMoreData = newMovies.length >= 20;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  Future<List<Movie>> _getMoviesForCurrentCategory({int page = 1}) async {
+    if (_currentSearchQuery.isNotEmpty) {
+      return ApiService.searchMovies(_currentSearchQuery, page: page);
+    }
+    
+    switch (_currentCategory) {
+      case MovieCategory.popular:
+        return ApiService.fetchPopularMovies(page: page);
+      case MovieCategory.topRated:
+        return ApiService.fetchTopRatedMovies(page: page);
+      case MovieCategory.upcoming:
+        return ApiService.fetchUpcomingMovies(page: page);
+    }
   }
 
   Future<void> _initializeFavorites() async {
@@ -55,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void dispose() {
     _searchController.dispose();
     _tabController.dispose();
+    _scrollController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
   }
@@ -64,41 +149,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _currentCategory = MovieCategory.values[index];
       _currentSearchQuery = ''; 
       _searchController.clear(); 
-      
-      switch (_currentCategory) {
-        case MovieCategory.popular:
-          _movies = ApiService.fetchPopularMovies();
-          break;
-        case MovieCategory.topRated:
-          _movies = ApiService.fetchTopRatedMovies();
-          break;
-        case MovieCategory.upcoming:
-          _movies = ApiService.fetchUpcomingMovies();
-          break;
-      }
     });
+    _loadInitialMovies(); // Reload movies for new category
   }
 
-  void _searchMovies(String query) {
+  Future<void> _searchMovies(String query) async {
     setState(() {
       _currentSearchQuery = query;
-      if (query.isEmpty) {
-        // Return to current category when search is cleared
-        switch (_currentCategory) {
-          case MovieCategory.popular:
-            _movies = ApiService.fetchPopularMovies();
-            break;
-          case MovieCategory.topRated:
-            _movies = ApiService.fetchTopRatedMovies();
-            break;
-          case MovieCategory.upcoming:
-            _movies = ApiService.fetchUpcomingMovies();
-            break;
-        }
-      } else {
-        _movies = ApiService.searchMovies(query);
-      }
+      _isLoading = true;
+      _error = null;
+      _movies.clear();
+      _currentPage = 1;
+      _hasMoreData = true;
     });
+
+    try {
+      final movies = await _getMoviesForCurrentCategory(page: 1);
+      setState(() {
+        _movies = movies;
+        _isLoading = false;
+        _currentPage = 2;
+        _hasMoreData = movies.length >= 20;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -112,24 +190,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _refreshMovies() async {
-    setState(() {
-      if (_currentSearchQuery.isEmpty) {
-        // Refresh based on current category
-        switch (_currentCategory) {
-          case MovieCategory.popular:
-            _movies = ApiService.fetchPopularMovies();
-            break;
-          case MovieCategory.topRated:
-            _movies = ApiService.fetchTopRatedMovies();
-            break;
-          case MovieCategory.upcoming:
-            _movies = ApiService.fetchUpcomingMovies();
-            break;
-        }
-      } else {
-        _movies = ApiService.searchMovies(_currentSearchQuery);
-      }
-    });
+    await _loadInitialMovies();
   }
 
   Future<void> _toggleFavorite(Movie movie) async {
@@ -249,88 +310,143 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       body: RefreshIndicator(
         onRefresh: _refreshMovies,
-        child: FutureBuilder<List<Movie>>(
-          future: _movies,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildShimmerLoading();
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: Container(
-                  height: MediaQuery.of(context).size.height - 200,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.movie_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          _currentSearchQuery.isEmpty 
-                              ? 'No ${_getCategoryDisplayName()} movies found.' 
-                              : 'No movies found for "$_currentSearchQuery"',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        if (_currentSearchQuery.isNotEmpty) ...[
-                          SizedBox(height: 8),
-                          Text(
-                            'Try searching with different keywords.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                        SizedBox(height: 16),
-                        Text(
-                          'Pull down to refresh',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ],
-                    ),
+        child: _buildMoviesList(),
+      ),
+    );
+  }
+
+  Widget _buildMoviesList() {
+    if (_isLoading && _movies.isEmpty) {
+      return _buildShimmerLoading();
+    } else if (_error != null && _movies.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[400],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Error loading movies',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadInitialMovies,
+              child: Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    } else if (_movies.isEmpty) {
+      return SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height - 200,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.movie_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 16),
+                Text(
+                  _currentSearchQuery.isEmpty 
+                      ? 'No ${_getCategoryDisplayName()} movies found.' 
+                      : 'No movies found for "$_currentSearchQuery"',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
                   ),
                 ),
-              );
-            }
+                if (_currentSearchQuery.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    'Try searching with different keywords.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+                SizedBox(height: 16),
+                Text(
+                  'Pull down to refresh',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
-            final movies = snapshot.data!;
-            return GridView.builder(
-              padding: EdgeInsets.all(16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, 
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.6, 
+    return GridView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2, 
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.6, 
+      ),
+      itemCount: _movies.length + (_isLoadingMore ? 2 : 0), // Add loading items
+      itemBuilder: (context, index) {
+        if (index >= _movies.length) {
+          // Show loading indicator at the bottom
+          return _buildLoadingCard();
+        }
+        
+        final movie = _movies[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MovieDetailScreen(movie: movie),
               ),
-              itemCount: movies.length,
-              itemBuilder: (context, index) {
-                final movie = movies[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MovieDetailScreen(movie: movie),
-                      ),
-                    ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
-                  },
-                  child: buildMovieCard(movie),
-                );
-              },
-            );
+            ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
           },
+          child: buildMovieCard(movie),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[300],
+        ),
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          ),
         ),
       ),
     );
