@@ -27,6 +27,10 @@ class ApiService {
     return _fetchMoviesByCategory('upcoming', page: page);
   }
 
+  static Future<List<Movie>> fetchNowPlayingMovies({int page = 1}) async {
+    return _fetchMoviesByCategory('now_playing', page: page);
+  }
+
   static Future<List<Movie>> _fetchMoviesByCategory(String category, {int page = 1}) async {
     final apiKey = _apiKey;
     if (apiKey == null || apiKey.isEmpty) {

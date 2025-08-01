@@ -7,7 +7,7 @@ import '../services/favorites_service.dart';
 import 'movie_detail_screen.dart';
 import 'favorites_screen.dart';
 
-enum MovieCategory { popular, topRated, upcoming }
+enum MovieCategory { popular, nowPlaying, topRated, upcoming }
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _initializeFavorites();
     _loadInitialMovies();
     _setupScrollListener();
@@ -116,6 +116,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     switch (_currentCategory) {
       case MovieCategory.popular:
         return ApiService.fetchPopularMovies(page: page);
+      case MovieCategory.nowPlaying:
+        return ApiService.fetchNowPlayingMovies(page: page);
       case MovieCategory.topRated:
         return ApiService.fetchTopRatedMovies(page: page);
       case MovieCategory.upcoming:
@@ -288,18 +290,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   indicatorColor: Colors.deepPurple,
                   labelColor: Colors.deepPurple,
                   unselectedLabelColor: Colors.grey[600],
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                  labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  unselectedLabelStyle: TextStyle(fontSize: 11),
                   tabs: [
                     Tab(
-                      icon: Icon(Icons.trending_up),
+                      icon: Icon(Icons.trending_up, size: 20),
                       text: 'Popular',
                     ),
                     Tab(
-                      icon: Icon(Icons.star),
+                      icon: Icon(Icons.play_circle_outline, size: 20),
+                      text: 'Now Playing',
+                    ),
+                    Tab(
+                      icon: Icon(Icons.star, size: 20),
                       text: 'Top Rated',
                     ),
                     Tab(
-                      icon: Icon(Icons.upcoming),
+                      icon: Icon(Icons.upcoming, size: 20),
                       text: 'Upcoming',
                     ),
                   ],
@@ -616,6 +623,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     switch (_currentCategory) {
       case MovieCategory.popular:
         return 'popular';
+      case MovieCategory.nowPlaying:
+        return 'now playing';
       case MovieCategory.topRated:
         return 'top rated';
       case MovieCategory.upcoming:
@@ -631,6 +640,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     switch (_currentCategory) {
       case MovieCategory.popular:
         return 'Popular Movie';
+      case MovieCategory.nowPlaying:
+        return 'Now Playing Movie';
       case MovieCategory.topRated:
         return 'Top Rated Movie';
       case MovieCategory.upcoming:
