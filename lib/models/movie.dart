@@ -1,4 +1,5 @@
 class Movie {
+  final int id;
   final String title;
   final String posterUrl;
   final String? backdropUrl;
@@ -9,6 +10,7 @@ class Movie {
   final int? runtime;
 
   Movie({
+    required this.id,
     required this.title,
     required this.posterUrl,
     this.backdropUrl,
@@ -21,6 +23,7 @@ class Movie {
 
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
+      id: _parseInt(json['id']),
       title: json['title'] ?? 'Unknown Title',
       posterUrl: json['poster_path'] != null 
           ? 'https://image.tmdb.org/t/p/w500${json['poster_path']}'
@@ -36,6 +39,21 @@ class Movie {
           : [],
       runtime: json['runtime'],
     );
+  }
+
+  // Convert Movie to JSON for storage
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'poster_path': posterUrl.replaceFirst('https://image.tmdb.org/t/p/w500', ''),
+      'backdrop_path': backdropUrl?.replaceFirst('https://image.tmdb.org/t/p/w1280', ''),
+      'overview': overview,
+      'vote_average': voteAverage,
+      'release_date': releaseDate,
+      'genres': genres,
+      'runtime': runtime,
+    };
   }
 
   static double _parseDouble(dynamic value) {

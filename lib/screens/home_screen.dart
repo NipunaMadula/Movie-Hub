@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
+import '../services/favorites_service.dart';
 import 'movie_detail_screen.dart';
+import 'favorites_screen.dart';
 
 enum MovieCategory { popular, topRated, upcoming }
 
@@ -19,17 +21,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late TabController _tabController;
   MovieCategory _currentCategory = MovieCategory.popular;
   Timer? _debounceTimer;
+  
+  late FavoritesService _favoritesService;
+  Set<int> _favoriteMovieIds = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _movies = ApiService.fetchPopularMovies();
+    _initializeFavorites();
     
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         _onCategoryChanged(_tabController.index);
       }
+    });
+  }
+
+  Future<void> _initializeFavorites() async {
+    _favoritesService = await FavoritesService.getInstance();
+    _loadFavoriteIds();
+  }
+
+  Future<void> _loadFavoriteIds() async {
+    final favoriteIds = await _favoritesService.getFavoriteMovieIds();
+    setState(() {
+      _favoriteMovieIds = favoriteIds;
     });
   }
 
@@ -44,8 +62,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _onCategoryChanged(int index) {
     setState(() {
       _currentCategory = MovieCategory.values[index];
-      _currentSearchQuery = ''; // Clear search when changing category
-      _searchController.clear(); // Clear search field
+      _currentSearchQuery = ''; 
+      _searchController.clear(); 
       
       switch (_currentCategory) {
         case MovieCategory.popular:
@@ -114,11 +132,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
 
+  Future<void> _toggleFavorite(Movie movie) async {
+    final bool success = await _favoritesService.toggleFavorite(movie);
+    if (success) {
+      await _loadFavoriteIds(); // Refresh favorite IDs
+      
+      final bool isNowFavorite = _favoriteMovieIds.contains(movie.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNowFavorite 
+                ? '${movie.title} added to favorites' 
+                : '${movie.title} removed from favorites'
+          ),
+          backgroundColor: isNowFavorite ? Colors.green[400] : Colors.red[400],
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Movie Hub'),
+        toolbarHeight: 56, 
+        actions: [
+          Container(
+            width: 56,
+            height: 56,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(28),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FavoritesScreen(),
+                    ),
+                  ).then((_) => _loadFavoriteIds()); 
+                },
+                child: Center(
+                  child: Icon(
+                    Icons.favorite,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(120),
           child: Column(
@@ -259,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       MaterialPageRoute(
                         builder: (context) => MovieDetailScreen(movie: movie),
                       ),
-                    );
+                    ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
                   },
                   child: buildMovieCard(movie),
                 );
@@ -272,6 +337,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget buildMovieCard(Movie movie) {
+    final bool isFavorite = _favoriteMovieIds.contains(movie.id);
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -287,24 +354,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              movie.posterUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(
-                    height: 180,
-                    color: Colors.grey[300],
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  movie.posterUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(
+                        height: 180,
+                        color: Colors.grey[300],
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 40,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => _toggleFavorite(movie),
+                  child: Container(
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(179), // 179 = 0.7 * 255
+                      shape: BoxShape.circle,
+                    ),
                     child: Icon(
-                      Icons.image_not_supported,
-                      size: 40,
-                      color: Colors.grey[600],
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.red : Colors.white,
+                      size: 22,
                     ),
                   ),
-            ),
+                ),
+              ),
+            ],
           ),
 
           Padding(

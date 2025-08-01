@@ -1,10 +1,54 @@
 import 'package:flutter/material.dart';
 import '../models/movie.dart';
+import '../services/favorites_service.dart';
 
-class MovieDetailScreen extends StatelessWidget {
+class MovieDetailScreen extends StatefulWidget {
   final Movie movie;
 
   MovieDetailScreen({required this.movie});
+
+  @override
+  _MovieDetailScreenState createState() => _MovieDetailScreenState();
+}
+
+class _MovieDetailScreenState extends State<MovieDetailScreen> {
+  late FavoritesService _favoritesService;
+  bool _isFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFavorites();
+  }
+
+  Future<void> _initializeFavorites() async {
+    _favoritesService = await FavoritesService.getInstance();
+    final isFavorite = await _favoritesService.isInFavorites(widget.movie.id);
+    setState(() {
+      _isFavorite = isFavorite;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    final bool success = await _favoritesService.toggleFavorite(widget.movie);
+    if (success) {
+      setState(() {
+        _isFavorite = !_isFavorite;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorite 
+                ? '${widget.movie.title} added to favorites' 
+                : '${widget.movie.title} removed from favorites'
+          ),
+          backgroundColor: _isFavorite ? Colors.green[400] : Colors.red[400],
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +59,19 @@ class MovieDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: _isFavorite ? Colors.red : Colors.white,
+                ),
+                onPressed: _toggleFavorite,
+                tooltip: _isFavorite ? 'Remove from favorites' : 'Add to favorites',
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                movie.title,
+                widget.movie.title,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -34,9 +88,9 @@ class MovieDetailScreen extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // Backdrop Image
-                  movie.backdropUrl != null && movie.backdropUrl!.isNotEmpty
+                  widget.movie.backdropUrl != null && widget.movie.backdropUrl!.isNotEmpty
                       ? Image.network(
-                          movie.backdropUrl!,
+                          widget.movie.backdropUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               Container(
@@ -64,7 +118,7 @@ class MovieDetailScreen extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withAlpha(179), // 179 = 0.7 * 255
                         ],
                       ),
                     ),
@@ -89,7 +143,7 @@ class MovieDetailScreen extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          movie.posterUrl,
+                          widget.movie.posterUrl,
                           width: 120,
                           height: 180,
                           fit: BoxFit.cover,
@@ -124,7 +178,7 @@ class MovieDetailScreen extends StatelessWidget {
                                 ),
                                 SizedBox(width: 4),
                                 Text(
-                                  '${movie.voteAverage.toStringAsFixed(1)}/10',
+                                  '${widget.movie.voteAverage.toStringAsFixed(1)}/10',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -136,7 +190,7 @@ class MovieDetailScreen extends StatelessWidget {
                             SizedBox(height: 8),
                             
                             // Release Date
-                            if (movie.releaseDate != null && movie.releaseDate!.isNotEmpty)
+                            if (widget.movie.releaseDate != null && widget.movie.releaseDate!.isNotEmpty)
                               Row(
                                 children: [
                                   Icon(
@@ -146,7 +200,7 @@ class MovieDetailScreen extends StatelessWidget {
                                   ),
                                   SizedBox(width: 4),
                                   Text(
-                                    _formatReleaseDate(movie.releaseDate!),
+                                    _formatReleaseDate(widget.movie.releaseDate!),
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 14,
@@ -158,21 +212,21 @@ class MovieDetailScreen extends StatelessWidget {
                             SizedBox(height: 8),
                             
                             // Genres
-                            if (movie.genres.isNotEmpty)
+                            if (widget.movie.genres.isNotEmpty)
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
-                                children: movie.genres.take(3).map((genre) {
+                                children: widget.movie.genres.take(3).map((genre) {
                                   return Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
+                                      color: Colors.blue.withAlpha(26), // 26 = 0.1 * 255
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: Colors.blue.withOpacity(0.3),
+                                        color: Colors.blue.withAlpha(77), // 77 = 0.3 * 255
                                       ),
                                     ),
                                     child: Text(
@@ -195,7 +249,7 @@ class MovieDetailScreen extends StatelessWidget {
                   SizedBox(height: 24),
                   
                   // Overview Section
-                  if (movie.overview != null && movie.overview!.isNotEmpty) ...[
+                  if (widget.movie.overview != null && widget.movie.overview!.isNotEmpty) ...[
                     Text(
                       'Overview',
                       style: TextStyle(
@@ -206,7 +260,7 @@ class MovieDetailScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      movie.overview!,
+                      widget.movie.overview!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.6,
@@ -240,19 +294,11 @@ class MovieDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            // TODO: Add to favorites functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added to favorites!'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.favorite_outline),
-                          label: Text('Add to Favorites'),
+                          onPressed: _toggleFavorite,
+                          icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_outline),
+                          label: Text(_isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[400],
+                            backgroundColor: _isFavorite ? Colors.grey[600] : Colors.red[400],
                             foregroundColor: Colors.white,
                             padding: EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
