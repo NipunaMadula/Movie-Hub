@@ -6,15 +6,23 @@ import '../models/movie.dart';
 class ApiService {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
 
-  static final String? _apiKey = dotenv.env['TMDB_API_KEY'];
+  static String? get _apiKey {
+    try {
+      return dotenv.env['TMDB_API_KEY'];
+    } catch (e) {
+      print('Error accessing API key from .env: $e');
+      return null;
+    }
+  }
 
   static Future<List<Movie>> fetchPopularMovies() async {
-    if (_apiKey == null) {
+    final apiKey = _apiKey;
+    if (apiKey == null || apiKey.isEmpty) {
       throw Exception('API key is missing. Please check your .env file.');
     }
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/movie/popular?api_key=$_apiKey'),
+      Uri.parse('$_baseUrl/movie/popular?api_key=$apiKey'),
     );
 
     if (response.statusCode == 200) {
@@ -24,6 +32,30 @@ class ApiService {
       return movies.map((json) => Movie.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load movies');
+    }
+  }
+
+  static Future<List<Movie>> searchMovies(String query) async {
+    final apiKey = _apiKey;
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('API key is missing. Please check your .env file.');
+    }
+
+    if (query.isEmpty) {
+      return fetchPopularMovies(); // Return popular movies if search is empty
+    }
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/search/movie?api_key=$apiKey&query=${Uri.encodeComponent(query)}'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final List movies = data['results'];
+
+      return movies.map((json) => Movie.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to search movies');
     }
   }
 }
