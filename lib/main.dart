@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:movie_hub/screens/home_screen.dart';
+import 'screens/home_screen.dart';
+import 'widgets/fade_in_widget.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -15,8 +16,21 @@ class MovieHubApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
+        // Add smooth page transitions globally
+        pageTransitionsTheme: PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
       ),
-      home: HomeScreen(),
+      home: FadeInWidget(
+        duration: Duration(milliseconds: 800),
+        child: HomeScreen(),
+      ),
     );
   }
 }

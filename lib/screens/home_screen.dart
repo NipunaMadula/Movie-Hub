@@ -4,6 +4,8 @@ import 'package:shimmer/shimmer.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
 import '../services/favorites_service.dart';
+import '../utils/page_transitions.dart';
+import '../widgets/fade_in_widget.dart';
 import 'movie_detail_screen.dart';
 import 'favorites_screen.dart';
 
@@ -310,15 +312,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => FavoritesScreen(),
+                    SlidePageRoute(
+                      child: FavoritesScreen(),
+                      beginOffset: const Offset(1.0, 0.0),
                     ),
                   ).then((_) => _loadFavoriteIds()); 
                 },
                 child: Center(
-                  child: Icon(
-                    Icons.favorite,
-                    size: 24,
+                  child: Hero(
+                    tag: 'favorites-icon',
+                    child: Icon(
+                      Icons.favorite,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -426,16 +432,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         
         final movie = _movies[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MovieDetailScreen(movie: movie),
-              ),
-            ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
-          },
-          child: buildMovieCard(movie),
+        return FadeInWidget(
+          delay: Duration(milliseconds: (index % 6) * 100), // Stagger by visible items
+          duration: Duration(milliseconds: 600),
+          slideOffset: Offset(0, 0.3),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                ScalePageRoute(
+                  child: MovieDetailScreen(movie: movie),
+                ),
+              ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
+            },
+            child: buildMovieCard(movie, index),
+          ),
         );
       },
     );
@@ -618,27 +629,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildLoadingCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
+    return FadeInWidget(
+      duration: Duration(milliseconds: 300),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[300],
         ),
-        child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[300],
+          ),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget buildMovieCard(Movie movie) {
+  Widget buildMovieCard(Movie movie, int index) {
     final bool isFavorite = _favoriteMovieIds.contains(movie.id);
     
     return Container(
@@ -658,23 +672,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  movie.posterUrl,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Container(
-                        height: 180,
-                        color: Colors.grey[300],
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 40,
-                          color: Colors.grey[600],
+              Hero(
+                tag: 'movie-poster-${movie.id}',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  child: Image.network(
+                    movie.posterUrl,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Container(
+                          height: 180,
+                          color: Colors.grey[300],
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 40,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
+                  ),
                 ),
               ),
               Positioned(
@@ -699,29 +716,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ],
           ),
 
-          Padding(
-            padding: EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  movie.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Hero(
+                    tag: 'movie-title-${movie.id}',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Text(
+                        movie.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4),
-                Text(
-                  _getCategoryLabel(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                  SizedBox(height: 4),
+                  Text(
+                    _getCategoryLabel(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

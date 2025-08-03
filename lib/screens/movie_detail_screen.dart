@@ -70,18 +70,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                widget.movie.title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 3,
-                      color: Colors.black54,
+              title: Hero(
+                tag: 'movie-title-${widget.movie.id}',
+                child: Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    widget.movie.title,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black54,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               background: Stack(
@@ -140,14 +146,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Poster
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.movie.posterUrl,
-                          width: 120,
-                          height: 180,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                      Hero(
+                        tag: 'movie-poster-${widget.movie.id}',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            widget.movie.posterUrl,
+                            width: 120,
+                            height: 180,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
                               Container(
                                 width: 120,
                                 height: 180,
@@ -158,6 +166,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   color: Colors.grey[600],
                                 ),
                               ),
+                          ),
                         ),
                       ),
                       
