@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   controller: _tabController,
                   indicatorColor: Colors.deepPurple,
                   labelColor: Colors.deepPurple,
-                  unselectedLabelColor: Colors.grey[600],
+                  unselectedLabelColor: Colors.white,
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   unselectedLabelStyle: TextStyle(fontSize: 11),
                   tabs: [
@@ -416,42 +416,72 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     } else if (_movies.isEmpty) {
       return _buildEmptyStateWidget();
     }
+    // Show a small header with the current category icon + name, then the grid
+    final int totalItems = _movies.length + (_isLoadingMore ? 2 : 0);
 
-    return GridView.builder(
+    return CustomScrollView(
       controller: _scrollController,
-      padding: EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 4 : 2, 
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.6, 
-      ),
-      itemCount: _movies.length + (_isLoadingMore ? 2 : 0), // Add loading items
-      itemBuilder: (context, index) {
-        if (index >= _movies.length) {
-          // Show loading indicator at the bottom
-          return _buildLoadingCard();
-        }
-        
-        final movie = _movies[index];
-        return FadeInWidget(
-          delay: Duration(milliseconds: (index % 6) * 100), // Stagger by visible items
-          duration: Duration(milliseconds: 600),
-          slideOffset: Offset(0, 0.3),
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                ScalePageRoute(
-                  child: MovieDetailScreen(movie: movie),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                Icon(_getCategoryIcon(), size: 20, color: Colors.deepPurple),
+                SizedBox(width: 8),
+                Text(
+                  _getCategoryDisplayName().toUpperCase(),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey[800]),
                 ),
-              ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
-            },
-            child: buildMovieCard(movie, index),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+        SliverPadding(
+          padding: EdgeInsets.all(16),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              if (index >= _movies.length) return _buildLoadingCard();
+
+              final movie = _movies[index];
+              return FadeInWidget(
+                delay: Duration(milliseconds: (index % 6) * 100),
+                duration: Duration(milliseconds: 600),
+                slideOffset: Offset(0, 0.3),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      ScalePageRoute(child: MovieDetailScreen(movie: movie)),
+                    ).then((_) => _loadFavoriteIds());
+                  },
+                  child: buildMovieCard(movie, index),
+                ),
+              );
+            }, childCount: totalItems),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 4 : 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.6,
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  IconData _getCategoryIcon() {
+    switch (_currentCategory) {
+      case MovieCategory.popular:
+        return Icons.trending_up;
+      case MovieCategory.nowPlaying:
+        return Icons.play_circle_outline;
+      case MovieCategory.topRated:
+        return Icons.star;
+      case MovieCategory.upcoming:
+        return Icons.upcoming;
+    }
   }
 
   Widget _buildErrorWidget() {
@@ -674,6 +704,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           // Movie Poster Section
           Expanded(
+            flex: 3,
             child: Stack(
               children: [
                 Hero(
@@ -724,27 +755,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
           // Movie Info Section
           Expanded(
+            flex: 1,
             child: Padding(
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.fromLTRB(8, 6, 8, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Hero(
-                    tag: 'movie-title-${movie.id}',
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Text(
-                        movie.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  // Reserve a fixed area for the title so category stays aligned
+                  SizedBox(
+                    height: 42,
+                    child: Hero(
+                      tag: 'movie-title-${movie.id}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          movie.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
+                  SizedBox(height: 4),
                   Text(
                     _getCategoryLabel(),
                     style: TextStyle(
