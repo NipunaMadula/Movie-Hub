@@ -304,34 +304,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         toolbarHeight: 56, 
         actions: [
           QuickActionsWidget(),
-          Container(
-            width: 56,
-            height: 56,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(28),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    SlidePageRoute(
-                      child: FavoritesScreen(),
-                      beginOffset: const Offset(1.0, 0.0),
-                    ),
-                  ).then((_) => _loadFavoriteIds()); 
-                },
-                child: Center(
-                  child: Hero(
-                    tag: 'favorites-icon',
-                    child: Icon(
-                      Icons.favorite,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(120),
@@ -374,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 TabBar(
                   controller: _tabController,
                   indicatorColor: Colors.deepPurple,
-                  labelColor: Colors.deepPurple,
+                  labelColor: Colors.black,
                   unselectedLabelColor: Colors.white,
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   unselectedLabelStyle: TextStyle(fontSize: 11),
@@ -416,72 +388,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     } else if (_movies.isEmpty) {
       return _buildEmptyStateWidget();
     }
-    // Show a small header with the current category icon + name, then the grid
-    final int totalItems = _movies.length + (_isLoadingMore ? 2 : 0);
 
-    return CustomScrollView(
+    return GridView.builder(
       controller: _scrollController,
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                Icon(_getCategoryIcon(), size: 20, color: Colors.deepPurple),
-                SizedBox(width: 8),
-                Text(
-                  _getCategoryDisplayName().toUpperCase(),
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey[800]),
+      padding: EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 4 : 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.6,
+      ),
+      itemCount: _movies.length + (_isLoadingMore ? 2 : 0), // Add loading items
+      itemBuilder: (context, index) {
+        if (index >= _movies.length) {
+          // Show loading indicator at the bottom
+          return _buildLoadingCard();
+        }
+        
+        final movie = _movies[index];
+        return FadeInWidget(
+          delay: Duration(milliseconds: (index % 6) * 100), // Stagger by visible items
+          duration: Duration(milliseconds: 600),
+          slideOffset: Offset(0, 0.3),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                ScalePageRoute(
+                  child: MovieDetailScreen(movie: movie),
                 ),
-              ],
-            ),
+              ).then((_) => _loadFavoriteIds()); // Refresh favorites when returning
+            },
+            child: buildMovieCard(movie, index),
           ),
-        ),
-        SliverPadding(
-          padding: EdgeInsets.all(16),
-          sliver: SliverGrid(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              if (index >= _movies.length) return _buildLoadingCard();
-
-              final movie = _movies[index];
-              return FadeInWidget(
-                delay: Duration(milliseconds: (index % 6) * 100),
-                duration: Duration(milliseconds: 600),
-                slideOffset: Offset(0, 0.3),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      ScalePageRoute(child: MovieDetailScreen(movie: movie)),
-                    ).then((_) => _loadFavoriteIds());
-                  },
-                  child: buildMovieCard(movie, index),
-                ),
-              );
-            }, childCount: totalItems),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 4 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.6,
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
-  }
-
-  IconData _getCategoryIcon() {
-    switch (_currentCategory) {
-      case MovieCategory.popular:
-        return Icons.trending_up;
-      case MovieCategory.nowPlaying:
-        return Icons.play_circle_outline;
-      case MovieCategory.topRated:
-        return Icons.star;
-      case MovieCategory.upcoming:
-        return Icons.upcoming;
-    }
   }
 
   Widget _buildErrorWidget() {
@@ -671,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[300],
+            color: Theme.of(context).cardColor,
           ),
           child: Center(
             child: CircularProgressIndicator(
@@ -689,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -720,11 +662,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           Container(
                             width: double.infinity,
                             height: double.infinity,
-                            color: Colors.grey[300],
+                            color: Theme.of(context).colorScheme.surface,
                             child: Icon(
                               Icons.image_not_supported,
                               size: 40,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                     ),

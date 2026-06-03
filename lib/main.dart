@@ -24,7 +24,7 @@ class _MovieHubAppState extends State<MovieHubApp> {
       debugShowCheckedModeBanner: false,
       theme: SimpleThemeService.lightTheme,
       darkTheme: SimpleThemeService.darkTheme,
-      themeMode: SimpleThemeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: ThemeMode.light,
       home: FadeInWidget(
         duration: Duration(milliseconds: 800),
         child: HomeScreen(),

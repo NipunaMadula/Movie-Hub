@@ -19,17 +19,19 @@ class SimpleThemeService {
 
   static ThemeData get lightTheme => ThemeData(
     brightness: Brightness.light,
-    primarySwatch: Colors.deepPurple,
-    primaryColor: Colors.deepPurple,
-    scaffoldBackgroundColor: Colors.grey[50],
+    primarySwatch: Colors.indigo,
+    primaryColor: Color.fromARGB(255, 4, 23, 53), // Professional navy blue
+    scaffoldBackgroundColor: Colors.black,
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.deepPurple,
+      backgroundColor: Color.fromARGB(255, 4, 23, 53),
       foregroundColor: Colors.white,
+      iconTheme: IconThemeData(color: Colors.white),
+      actionsIconTheme: IconThemeData(color: Colors.white),
       elevation: 0,
       centerTitle: false,
     ),
     cardTheme: CardTheme(
-      elevation: 4,
+      elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -41,12 +43,12 @@ class SimpleThemeService {
         borderSide: BorderSide.none,
       ),
       filled: true,
-      fillColor: Colors.grey[200],
+      fillColor: Color(0xFFE9EEF8),
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Color.fromARGB(255, 4, 23, 53),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
@@ -54,25 +56,33 @@ class SimpleThemeService {
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       ),
     ),
+    colorScheme: ColorScheme.light(
+      primary: Color.fromARGB(255, 4, 23, 53),
+      secondary: Color(0xFF0F4BBF),
+      background: Colors.black,
+      surface: Colors.white,
+    ),
   );
 
   static ThemeData get darkTheme => ThemeData(
     brightness: Brightness.dark,
-    primarySwatch: Colors.deepPurple,
-    primaryColor: Colors.deepPurple,
-    scaffoldBackgroundColor: Color(0xFF121212),
+    primarySwatch: Colors.indigo,
+    primaryColor: Color(0xFF071033), // Deep navy-black
+    scaffoldBackgroundColor: Colors.black,
     appBarTheme: AppBarTheme(
-      backgroundColor: Color(0xFF1E1E1E),
+      backgroundColor: Color(0xFF071033),
       foregroundColor: Colors.white,
+      iconTheme: IconThemeData(color: Colors.white),
+      actionsIconTheme: IconThemeData(color: Colors.white),
       elevation: 0,
       centerTitle: false,
     ),
     cardTheme: CardTheme(
-      elevation: 4,
+      elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      color: Color(0xFF1E1E1E),
+      color: Color(0xFF0E1624),
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
@@ -80,12 +90,12 @@ class SimpleThemeService {
         borderSide: BorderSide.none,
       ),
       filled: true,
-      fillColor: Color(0xFF2C2C2C),
+      fillColor: Color(0xFF0A1220),
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Color.fromARGB(255, 4, 23, 53),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
@@ -94,10 +104,10 @@ class SimpleThemeService {
       ),
     ),
     colorScheme: ColorScheme.dark(
-      primary: Colors.deepPurple,
-      secondary: Colors.deepPurpleAccent,
-      surface: Color(0xFF1E1E1E),
-      background: Color(0xFF121212),
+      primary: Color.fromARGB(255, 4, 23, 53),
+      secondary: Color(0xFF0F4BBF),
+      surface: Color(0xFF0E1624),
+      background: Colors.black,
     ),
   );
 }
