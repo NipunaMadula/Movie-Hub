@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/settings_screen.dart';
-import '../screens/advanced_search_screen.dart';
+// Removed advanced search and settings actions per user request
 import '../screens/favorites_screen.dart';
 import '../utils/page_transitions.dart';
 
@@ -19,43 +18,7 @@ class _QuickActionsWidgetState extends State<QuickActionsWidget> {
       mainAxisSize: MainAxisSize.min,
       children: [
 
-        // Advanced Search Button
-        Container(
-          width: 56,
-          height: 56,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AdvancedSearchScreen()),
-                );
-              },
-              child: Center(child: Icon(Icons.search_outlined, size: 20)),
-            ),
-          ),
-        ),
-
-        // Settings Button
-        Container(
-          width: 56,
-          height: 56,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsScreen()),
-                );
-              },
-              child: Center(child: Icon(Icons.settings, size: 20)),
-            ),
-          ),
-        ),
+        // (advanced search & settings buttons removed)
         // Favorites Button (aligned with AppBar favorite)
         Container(
           width: 56,

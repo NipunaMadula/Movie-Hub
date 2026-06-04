@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 TabBar(
                   controller: _tabController,
                   indicatorColor: Colors.deepPurple,
-                  labelColor: Colors.black,
+                  labelColor: Colors.white,
                   unselectedLabelColor: Colors.white,
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   unselectedLabelStyle: TextStyle(fontSize: 11),
