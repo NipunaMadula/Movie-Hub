@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/movie.dart';
 import '../services/favorites_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final Movie movie;
@@ -320,13 +321,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // TODO: Add share functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Share feature coming soon!'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
+                            final releaseYear = (widget.movie.releaseDate != null && widget.movie.releaseDate!.isNotEmpty)
+                                ? ' (${widget.movie.releaseDate!.split('-')[0]})'
+                                : '';
+                            final shareText = '${widget.movie.title}$releaseYear\n\nCheck it out: https://www.themoviedb.org/movie/${widget.movie.id}';
+                            Share.share(shareText);
                           },
                           icon: Icon(Icons.share_outlined),
                           label: Text('Share'),
