@@ -334,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ],
           ],
         ),
-        toolbarHeight: 56, 
+        toolbarHeight: 70, 
         actions: [
           QuickActionsWidget(),
         ],
@@ -344,7 +344,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             children: [
               // Search Bar
               Padding(
-                padding: EdgeInsets.all(16),
+                // reduce bottom padding to bring TabBar closer
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
