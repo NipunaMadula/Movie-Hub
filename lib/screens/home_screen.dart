@@ -353,9 +353,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Icon(_isLoggedIn ? Icons.person : Icons.person_outline, size: 32, color: Colors.white),
               ),
               decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-              onDetailsPressed: () {
+              onDetailsPressed: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+                final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+                if (result != null && mounted) {
+                  setState(() {
+                    _isLoggedIn = result['isLoggedIn'] ?? _isLoggedIn;
+                    _username = result['username'] ?? _username;
+                  });
+                }
               },
             ),
 
