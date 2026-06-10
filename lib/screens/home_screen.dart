@@ -10,6 +10,16 @@ import '../widgets/quick_actions_widget.dart';
 import 'movie_detail_screen.dart';
 import 'favorites_screen.dart';
 import 'settings_screen.dart';
+import 'profile_screen.dart';
+import 'downloads_screen.dart';
+import 'notifications_screen.dart';
+import 'genres_screen.dart';
+import 'about_screen.dart';
+import 'feedback_screen.dart';
+import 'watchlist_screen.dart';
+import 'advanced_search_screen.dart';
+import '../services/simple_theme_service.dart';
+import 'package:flutter/services.dart';
 
 enum MovieCategory { popular, nowPlaying, topRated, upcoming }
 
@@ -41,6 +51,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Favorites
   late FavoritesService _favoritesService;
   Set<int> _favoriteMovieIds = {};
+  bool _isLoggedIn = false;
+  String _username = '';
 
   @override
   void initState() {
@@ -182,6 +194,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  void _clearImageCache() {
+    PaintingBinding.instance.imageCache.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Image cache cleared')),
+    );
+  }
+
+  void _showShareDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Share Movie Hub'),
+        content: Text('Share Movie Hub with your friends! Link: https://example.com/moviehub'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: 'https://example.com/moviehub'));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link copied to clipboard')));
+            },
+            child: Text('Copy Link'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleLogin() {
+    setState(() {
+      _isLoggedIn = !_isLoggedIn;
+      _username = _isLoggedIn ? 'User' : '';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isLoggedIn ? 'Logged in' : 'Logged out')),
+    );
+  }
+
   void _onCategoryChanged(int index) {
     setState(() {
       _currentCategory = MovieCategory.values[index];
@@ -292,20 +345,131 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
+            UserAccountsDrawerHeader(
+              accountName: Text(_isLoggedIn ? _username : 'Guest'),
+              accountEmail: Text(_isLoggedIn ? 'you@moviehub.app' : 'Sign in for more'),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white24,
+                child: Icon(_isLoggedIn ? Icons.person : Icons.person_outline, size: 32, color: Colors.white),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text('Movie Hub', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Text('Browse movies', style: TextStyle(color: Colors.white70)),
-                ],
-              ),
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+              onDetailsPressed: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+              },
             ),
+
+            ListTile(
+              leading: Icon(Icons.search),
+              title: Text('Search'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => AdvancedSearchScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.favorite),
+              title: Text('Favorites'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.bookmark),
+              title: Text('Watchlist'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => WatchlistScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.category),
+              title: Text('Browse by Genre'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => GenresScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.download),
+              title: Text('Downloads'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => DownloadsScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.notifications),
+              title: Text('Notifications'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsScreen()));
+              },
+            ),
+
+            SwitchListTile(
+              secondary: Icon(Icons.brightness_6),
+              title: Text('Dark Mode'),
+              value: SimpleThemeService.isDarkModeNotifier.value,
+              onChanged: (v) async {
+                await SimpleThemeService.toggleTheme();
+                setState(() {});
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.feedback),
+              title: Text('Send Feedback'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => FeedbackScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('About & Privacy'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => AboutScreen()));
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Rate & Share'),
+              onTap: () {
+                Navigator.pop(context);
+                _showShareDialog();
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.delete_outline),
+              title: Text('Clear Image Cache'),
+              onTap: () {
+                Navigator.pop(context);
+                _clearImageCache();
+              },
+            ),
+
+            Divider(),
+
+            ListTile(
+              leading: Icon(_isLoggedIn ? Icons.logout : Icons.login),
+              title: Text(_isLoggedIn ? 'Logout' : 'Login'),
+              onTap: () {
+                Navigator.pop(context);
+                _toggleLogin();
+              },
+            ),
+
             ListTile(
               leading: Icon(Icons.settings),
               title: Text('Settings'),

@@ -19,16 +19,21 @@ class MovieHubApp extends StatefulWidget {
 class _MovieHubAppState extends State<MovieHubApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Movie Hub',
-      debugShowCheckedModeBanner: false,
-      theme: SimpleThemeService.lightTheme,
-      darkTheme: SimpleThemeService.darkTheme,
-      themeMode: ThemeMode.light,
-      home: FadeInWidget(
-        duration: Duration(milliseconds: 800),
-        child: HomeScreen(),
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: SimpleThemeService.isDarkModeNotifier,
+      builder: (context, isDark, child) {
+        return MaterialApp(
+          title: 'Movie Hub',
+          debugShowCheckedModeBanner: false,
+          theme: SimpleThemeService.lightTheme,
+          darkTheme: SimpleThemeService.darkTheme,
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+          home: FadeInWidget(
+            duration: Duration(milliseconds: 800),
+            child: HomeScreen(),
+          ),
+        );
+      },
     );
   }
 }

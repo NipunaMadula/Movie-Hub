@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SimpleThemeService {
   static bool _isDarkMode = false;
   static SharedPreferences? _prefs;
+  static ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false);
 
   static bool get isDarkMode => _isDarkMode;
 
   static Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
     _isDarkMode = _prefs?.getBool('isDarkMode') ?? false;
+    isDarkModeNotifier.value = _isDarkMode;
   }
 
   static Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
     await _prefs?.setBool('isDarkMode', _isDarkMode);
+    isDarkModeNotifier.value = _isDarkMode;
   }
 
   static ThemeData get lightTheme => ThemeData(
